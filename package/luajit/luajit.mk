@@ -4,11 +4,28 @@
 #
 ################################################################################
 
-LUAJIT_VERSION = 41fb94defa8f830ce69a8122b03f6ac3216d392a
+LUAJIT_VERSION = a4f56a459a588ae768801074b46ba0adcfb49eb1
 LUAJIT_SITE = $(call github,LuaJIT,LuaJIT,$(LUAJIT_VERSION))
 LUAJIT_LICENSE = MIT
 LUAJIT_LICENSE_FILES = COPYRIGHT
 LUAJIT_CPE_ID_VENDOR = luajit
+LUAJIT_CPE_ID_VERSION = 2.1.0
+LUAJIT_CPE_ID_UPDATE = beta3
+
+# Fixed in 53f82e6e2e858a0a62fd1a2ff47e9866693382e6
+LUAJIT_IGNORE_CVES += CVE-2020-15890
+
+# Fixed in e296f56b825c688c3530a981dc6b495d972f3d01
+LUAJIT_IGNORE_CVES += CVE-2020-24372
+
+# Fixed in 343ce0edaf3906a62022936175b2f5410024cbfc
+LUAJIT_IGNORE_CVES += CVE-2024-25176
+
+# Fixed in 85b4fed0b0353dd78c8c875c2f562d522a2b310f
+LUAJIT_IGNORE_CVES += CVE-2024-25177
+
+# Fixed in defe61a56751a0db5f00ff3ab7b8f45436ba74c8
+LUAJIT_IGNORE_CVES += CVE-2024-25178
 
 LUAJIT_INSTALL_STAGING = YES
 
@@ -32,15 +49,6 @@ else
 LUAJIT_HOST_CC = $(HOSTCC) -m32
 LUAJIT_XCFLAGS += -DLUAJIT_DISABLE_GC64
 endif
-
-# emulation of git archive with .gitattributes & export-subst
-# Timestamp of the $(LUAJIT_VERSION) commit, obtained in the LuaJit
-# repo, with:   git show -s --format=%ct $(LUAJIT_VERSION)
-define LUAJIT_GEN_RELVER_FILE
-	echo 1693350652 >$(@D)/.relver
-endef
-LUAJIT_POST_EXTRACT_HOOKS = LUAJIT_GEN_RELVER_FILE
-HOST_LUAJIT_POST_EXTRACT_HOOKS = LUAJIT_GEN_RELVER_FILE
 
 # We unfortunately can't use TARGET_CONFIGURE_OPTS, because the luajit
 # build system uses non conventional variable names.

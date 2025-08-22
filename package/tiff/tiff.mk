@@ -4,18 +4,27 @@
 #
 ################################################################################
 
-TIFF_VERSION = 4.6.0
-TIFF_SITE = http://download.osgeo.org/libtiff
+TIFF_VERSION = 4.7.0
+TIFF_SOURCE = tiff-$(TIFF_VERSION).tar.xz
+TIFF_SITE = https://download.osgeo.org/libtiff
 TIFF_LICENSE = tiff license
 TIFF_LICENSE_FILES = LICENSE.md
 TIFF_CPE_ID_VENDOR = libtiff
 TIFF_CPE_ID_PRODUCT = libtiff
 TIFF_INSTALL_STAGING = YES
 
+# 0001-don-t-skip-the-first-line-of-the-input-image.patch, 0002-fix-tiffmedian-bug.patch, 0003-conflict-resolution.patch
+TIFF_IGNORE_CVES += CVE-2025-8176
+
+# 0004-fix-for-thumbnail-issue.patch
+TIFF_IGNORE_CVES += CVE-2025-8177
+
 # webp has a (optional) dependency on tiff, so we can't have webp
 # support in tiff, or that would create a circular dependency.
 TIFF_CONF_OPTS = \
 	--disable-contrib \
+	--disable-lerc \
+	--disable-jbig \
 	--disable-tests \
 	--disable-webp
 
@@ -24,8 +33,10 @@ TIFF_DEPENDENCIES = host-pkgconf
 HOST_TIFF_CONF_OPTS = \
 	--disable-cxx \
 	--disable-zlib \
+	--disable-lerc \
 	--disable-libdeflate \
 	--disable-lzma \
+	--disable-jbig \
 	--disable-jpeg \
 	--disable-tests \
 	--disable-webp \
@@ -97,10 +108,6 @@ endif
 
 ifneq ($(BR2_PACKAGE_TIFF_OLD_JPEG),y)
 TIFF_CONF_OPTS += --disable-old-jpeg
-endif
-
-ifneq ($(BR2_PACKAGE_TIFF_JBIG),y)
-TIFF_CONF_OPTS += --disable-jbig
 endif
 
 ifeq ($(BR2_PACKAGE_TIFF_UTILITIES),y)

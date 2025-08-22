@@ -4,14 +4,17 @@
 #
 ################################################################################
 
-PYTHON3_VERSION_MAJOR = 3.12
-PYTHON3_VERSION = $(PYTHON3_VERSION_MAJOR).1
+PYTHON3_VERSION_MAJOR = 3.13
+PYTHON3_VERSION = $(PYTHON3_VERSION_MAJOR).5
 PYTHON3_SOURCE = Python-$(PYTHON3_VERSION).tar.xz
 PYTHON3_SITE = https://python.org/ftp/python/$(PYTHON3_VERSION)
 PYTHON3_LICENSE = Python-2.0, others
 PYTHON3_LICENSE_FILES = LICENSE
 PYTHON3_CPE_ID_VENDOR = python
 PYTHON3_CPE_ID_PRODUCT = python
+
+# 0009-3.13-gh-130577-tarfile-now-validates-archives-to-ens.patch
+PYTHON3_IGNORE_CVES += CVE-2025-8194
 
 # This host Python is installed in $(HOST_DIR), as it is needed when
 # cross-compiling third-party Python modules.
@@ -23,17 +26,14 @@ HOST_PYTHON3_CONF_OPTS += \
 	--disable-tk \
 	--with-expat=system \
 	--disable-test-modules \
-	--disable-idle3 \
-	--disable-ossaudiodev
+	--disable-idle3
 
 # Make sure that LD_LIBRARY_PATH overrides -rpath.
 # This is needed because libpython may be installed at the same time that
 # python is called.
-# Make python believe we don't have 'hg', so that it doesn't try to
-# communicate over the network during the build.
+# TODO: nis and ossaudiodev modules will be dropped in 3.13: https://peps.python.org/pep-0594/
 HOST_PYTHON3_CONF_ENV += \
 	LDFLAGS="$(HOST_LDFLAGS) -Wl,--enable-new-dtags" \
-	py_cv_module_nis=n/a \
 	py_cv_module_unicodedata=yes \
 	py_cv_module__codecs_cn=n/a \
 	py_cv_module__codecs_hk=n/a \
@@ -42,7 +42,8 @@ HOST_PYTHON3_CONF_ENV += \
 	py_cv_module__codecs_kr=n/a \
 	py_cv_module__codecs_tw=n/a \
 	py_cv_module__uuid=n/a \
-	ac_cv_prog_HAS_HG=/bin/false
+	py_cv_module_nis=n/a \
+	py_cv_module_ossaudiodev=n/a
 
 PYTHON3_DEPENDENCIES = host-python3 libffi
 
@@ -57,6 +58,12 @@ ifeq ($(BR2_PACKAGE_HOST_PYTHON3_BZIP2),y)
 HOST_PYTHON3_DEPENDENCIES += host-bzip2
 else
 HOST_PYTHON3_CONF_ENV += py_cv_module__bz2=n/a
+endif
+
+ifeq ($(BR2_PACKAGE_HOST_PYTHON3_XZ),y)
+HOST_PYTHON3_DEPENDENCIES += host-xz
+else
+HOST_PYTHON3_CONF_ENV += py_cv_module__lzma=n/a
 endif
 
 ifeq ($(BR2_PACKAGE_HOST_PYTHON3_CURSES),y)
@@ -170,27 +177,19 @@ ifneq ($(BR2_PACKAGE_PYTHON3_OSSAUDIODEV),y)
 PYTHON3_CONF_ENV += py_cv_module_ossaudiodev=n/a
 endif
 
-# Make python believe we don't have 'hg', so that it doesn't try to
-# communicate over the network during the build.
 PYTHON3_CONF_ENV += \
 	ac_cv_have_long_long_format=yes \
+	ac_cv_buggy_getaddrinfo=no \
 	ac_cv_file__dev_ptmx=yes \
 	ac_cv_file__dev_ptc=yes \
 	ac_cv_working_tzset=yes \
-	py_cv_module_nis=n/a \
-	ac_cv_prog_HAS_HG=/bin/false
+	py_cv_module_nis=n/a
 
 # GCC is always compliant with IEEE754
 ifeq ($(BR2_ENDIAN),"LITTLE")
 PYTHON3_CONF_ENV += ac_cv_little_endian_double=yes
 else
 PYTHON3_CONF_ENV += ac_cv_big_endian_double=yes
-endif
-
-# uClibc is known to have a broken wcsftime() implementation, so tell
-# Python 3 to fall back to strftime() instead.
-ifeq ($(BR2_TOOLCHAIN_USES_UCLIBC),y)
-PYTHON3_CONF_ENV += ac_cv_func_wcsftime=no
 endif
 
 ifeq ($(BR2_PACKAGE_GETTEXT_PROVIDES_LIBINTL),y)
@@ -214,18 +213,11 @@ PYTHON3_CONF_OPTS += \
 #
 define PYTHON3_REMOVE_USELESS_FILES
 	rm -f $(TARGET_DIR)/usr/bin/python$(PYTHON3_VERSION_MAJOR)-config
-	rm -f $(TARGET_DIR)/usr/bin/python$(PYTHON3_VERSION_MAJOR)m-config
 	rm -f $(TARGET_DIR)/usr/bin/python3-config
-	rm -f $(TARGET_DIR)/usr/bin/smtpd.py.3
-	rm -f $(TARGET_DIR)/usr/lib/python$(PYTHON3_VERSION_MAJOR)/distutils/command/wininst*.exe
-	for i in `find $(TARGET_DIR)/usr/lib/python$(PYTHON3_VERSION_MAJOR)/config-$(PYTHON3_VERSION_MAJOR)m-*/ \
-		-type f -not -name Makefile` ; do \
-		rm -f $$i ; \
-	done
-	rm -rf $(TARGET_DIR)/usr/lib/python$(PYTHON3_VERSION_MAJOR)/__pycache__/
-	rm -rf $(TARGET_DIR)/usr/lib/python$(PYTHON3_VERSION_MAJOR)/lib-dynload/sysconfigdata/__pycache__
-	rm -rf $(TARGET_DIR)/usr/lib/python$(PYTHON3_VERSION_MAJOR)/collections/__pycache__
-	rm -rf $(TARGET_DIR)/usr/lib/python$(PYTHON3_VERSION_MAJOR)/importlib/__pycache__
+	find $(TARGET_DIR)/usr/lib/python$(PYTHON3_VERSION_MAJOR)/config-$(PYTHON3_VERSION_MAJOR)*/ \
+		-depth -type f -not -name Makefile -exec rm -rf {} \;
+	find $(TARGET_DIR)/usr/lib/python$(PYTHON3_VERSION_MAJOR)/ -depth -type d \
+		-name __pycache__ -exec rm -rf {} \;
 endef
 
 PYTHON3_POST_INSTALL_TARGET_HOOKS += PYTHON3_REMOVE_USELESS_FILES

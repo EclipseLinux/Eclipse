@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-MOTION_VERSION = 4.6.0
+MOTION_VERSION = 4.7.0
 MOTION_SITE = $(call github,Motion-Project,motion,release-$(MOTION_VERSION))
 MOTION_LICENSE = GPL-2.0
 MOTION_LICENSE_FILES = LICENSE
@@ -23,8 +23,8 @@ else
 MOTION_CONF_OPTS += --without-ffmpeg
 endif
 
-ifeq ($(BR2_PACKAGE_MYSQL),y)
-MOTION_DEPENDENCIES += mysql
+ifeq ($(BR2_PACKAGE_MARIADB),y)
+MOTION_DEPENDENCIES += mariadb
 MOTION_CONF_OPTS += --with-mysql
 else
 MOTION_CONF_OPTS += --without-mysql
